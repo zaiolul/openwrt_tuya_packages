@@ -54,12 +54,11 @@ void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_m
             break;
     }
 }
-
-int client_init(char *device_id, char *secret)
+int tuya_init(char *device_id, char *secret)
 {
-    tuya_mqtt_context_t* client = &client_instance;
+    // tuya_mqtt_context_t* client = &client_instance;
     /* initialize the client */
-    int ret = tuya_mqtt_init(client, &(const tuya_mqtt_config_t) {
+    int ret = tuya_mqtt_init(&client_instance, &(const tuya_mqtt_config_t) {
         .host = "m1.tuyacn.com",
         .port = 8883,
         .cacert = tuya_cacert_pem,
@@ -77,31 +76,43 @@ int client_init(char *device_id, char *secret)
         syslog(LOG_ERR, "Failed to initialize");
         return ret;
     }
+    return OPRT_OK;
+}
+int tuya_connect(int retries)
+{
     int retry_count = 0;
-    int max_retries = 5;
-    while(retry_count < max_retries)
+    int ret;
+    while(retry_count < retries)
     {
         /*try to connect*/
-        if((ret = tuya_mqtt_connect(client)) != OPRT_OK){
+        if((ret = tuya_mqtt_connect(&client_instance)) != OPRT_OK){
             syslog(LOG_WARNING, "Failed to connect... retrying");
         }
         else break;
         retry_count++;
     }
-    if(retry_count == max_retries){
+    if(retry_count == retries){
         syslog(LOG_ERR, "Can't establish connection. Terminating.");
         return ret;
     }
+    return OPRT_OK;
+}
+int tuya_start(char *device_id, char *secret)
+{   
+    int ret;
+    if((ret = tuya_init(device_id, secret)) != OPRT_OK)
+        return ret;
+    if((ret = tuya_connect(5)) != OPRT_OK)
+        return ret;
    
     syslog(LOG_WARNING, "Log Daemon Start");
     return OPRT_OK;
 }
 
-int client_deinit()
+int tuya_deinit()
 {
-    tuya_mqtt_context_t* client = &client_instance;
-    tuya_mqtt_disconnect(client); 
-    tuya_mqtt_deinit(client); //free memory
+    tuya_mqtt_disconnect(&client_instance); 
+    tuya_mqtt_deinit(&client_instance); //free memory
     syslog(LOG_WARNING, "Daemon terminated");
 }
 

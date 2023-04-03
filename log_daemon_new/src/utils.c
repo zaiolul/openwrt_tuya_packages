@@ -8,12 +8,9 @@
 #include <time.h>
 #include "cJSON.h"
 #include <argp.h>
-#include <libubox/blobmsg_json.h>
-#include <libubus.h>
 #include "utils.h"
 #include "tuya_utils.h"
 #include "ubus_utils.h"
-
 
 int run = 1;
 
@@ -140,12 +137,12 @@ int main_func(struct arguments arguments)
         }
     }
     int ret;
-    if((ret = ubus_start_all())){
+    if((ret = ubus_start())){
         return ret;
     }
     
-    if((ret = client_init( arguments.device_id, arguments.secret)) != 0){
-        client_deinit();
+    if((ret = tuya_start( arguments.device_id, arguments.secret)) != 0){
+        tuya_deinit();
         return ret;
     }
 
@@ -160,8 +157,9 @@ int main_func(struct arguments arguments)
     }
     
     /*disconnect device*/
-    client_deinit();
-    ubus_free_all();
+    tuya_deinit();
+    ubus_end();
+
     return 0;
 }
 
