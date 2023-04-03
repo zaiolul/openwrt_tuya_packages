@@ -8,21 +8,6 @@
 
 tuya_mqtt_context_t client_instance;
 
-int get_field_value(const tuyalink_message_t* msg, char* str, char* value)
-{
-    cJSON *json = cJSON_Parse(msg->data_string);
-    json = json->child;
-    while(json != NULL){
-        if(strcmp(str, json->string) == 0){
-            strncpy(value, json->valuestring, 30);
-            break;
-        }
-        json = json->next;
-    }
-    cJSON_free(json);
-    return 0;
-}
-
 int send_report(char* report)
 {
     tuya_mqtt_context_t* client = &client_instance;
@@ -35,41 +20,23 @@ int send_report(char* report)
     syslog(LOG_INFO, "Report message was sent succesfully");
     return OPRT_OK;
 }
+void action_handler(const tuyalink_message_t *msg)
+{
+    cJSON *json = cJSON_Parse(msg->data_string);
+    cJSON *action = cJSON_GetObjectItemCaseSensitive(json, "actionCode");
+    syslog(LOG_INFO, "%s action received", action->valuestring); 
 
-int get_device_data(struct device_list *dev_list)
-{
-    (*dev_list).count = 0;
-    uint32_t id;
-    struct ubus_context *ctx;
-    ubus_start(&ctx, "esp_control", &id);
-    ubus_invoke(ctx, id, "devices", NULL, devices_cb, dev_list, 1000);
-    ubus_free(ctx);
-}
-int report_device_data(struct device_list dev_list)
-{
-    char array_data[DEVICE_CAP*1024] = "";
-    for(int i = 0; i < dev_list.count; i ++)
-    {
-        char part[1024];
-        sprintf(part, "\"{\\\"port\\\":\\\"%s\\\",\\\"vid\\\":\\\"%s\\\",\\\"pid\\\":\\\"%s\\\"}\",",
-        dev_list.devices[i].port, dev_list.devices[i].vid, dev_list.devices[i].pid); // creates report string
-        printf("%s\n", part);
-        strncat(array_data, part, 1024);
+    if(strcmp( action->valuestring, "get_devices") == 0){
+        report_device_data();
+    } else if(strcmp(action->valuestring, "change_state") == 0){
+        cJSON *params = cJSON_GetObjectItemCaseSensitive(json, "inputParams");
+        change_gpio_state(params);
     }
-
-    array_data[strlen(array_data) - 1] = '\0'; // remove last comma;
-    char full_message[sizeof(array_data)];
-    sprintf(full_message, "{\"device_list\":[%s]}", array_data);
-
-    int ret = send_report(full_message);
-    return ret;
+    cJSON_free(json);
 }
-
 void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_message_t* msg)
 {
-    char value[30];
     switch (msg->type) {
-        
         case THING_TYPE_PROPERTY_REPORT_RSP:
             syslog(LOG_INFO, "Cloud received and replied: id:%s, type:%d", msg->msgid, msg->type);
             break;
@@ -78,15 +45,8 @@ void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_m
             syslog(LOG_INFO, "Device received id:%s, type:%d", msg->msgid, msg->type);
             write_to_file("write", msg->data_string, "/var/tmp/from-cloud");
             break;
-        case THING_TYPE_ACTION_EXECUTE:
-            get_field_value(msg, "actionCode", value);
-            syslog(LOG_INFO, "%s action received", value);
-
-            if(strcmp(value, "get_devices") == 0){
-                struct device_list dev_list;
-                get_device_data(&dev_list);
-                report_device_data(dev_list);
-            }
+        case THING_TYPE_ACTION_EXECUTE: 
+            action_handler(msg);
             break;
 
         default:

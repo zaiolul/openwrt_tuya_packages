@@ -10,10 +10,9 @@ int client_init(char *device_id, char *secret);
 /*disconnect the device, clear up memory*/
 int client_deinit();
 
-/*sends REPORT to cloud*/
+void action_handler(const tuyalink_message_t *msg);
+/*sends message to cloud*/
 int send_report(char* report);
-int get_field_value(const tuyalink_message_t* msg, char* str, char* value);
-int report_device_data(struct device_list dev_list);
-int get_device_data(struct device_list *dev_list);
+/*tuya loop wrapper*/
 int tuya_loop();
 #endif
