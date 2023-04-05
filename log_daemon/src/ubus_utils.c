@@ -86,7 +86,9 @@ void devices_cb(struct ubus_request *req, int type, struct blob_attr *msg)
         memcpy(&dev.port, blobmsg_get_string(device_data[DEVICE_PORT]), 30);
         memcpy(&dev.pid, blobmsg_get_string(device_data[DEVICE_PID]), 30);
         memcpy(&dev.vid, blobmsg_get_string(device_data[DEVICE_VID]), 30);
-        memcpy(&((*dev_list).devices[(*dev_list).count]), &dev, sizeof(struct device));
+
+        memcpy(&(dev_list->devices[(*dev_list).count]), &dev, sizeof(struct device));
+        
         (*dev_list).count++;
         if((*dev_list).count == DEVICE_CAP){
             syslog(LOG_ERR, "Device cap reached");

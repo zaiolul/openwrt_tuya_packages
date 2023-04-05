@@ -9,7 +9,7 @@ LIB:= -llink_core -lmiddleware_implementation -lplatform_port -lutils_modules -l
 INC:= -I./includes
  #-I../sdk/utils -I../sdk/include -I../sdk/interface -I../sdk/libraries/coreJSON/source/include 
 CC:=gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 
 .PHONY: all clean
 

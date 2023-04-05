@@ -5,6 +5,7 @@
 #include <libubox/blobmsg_json.h>
 #include <libubus.h>
 
+
 /*program usage documentation*/
 static char doc[] = "Log daemon program. Connects to Tuya cloud service, sends and receives data.";
 
@@ -16,11 +17,6 @@ static struct argp_option options[] = {
     {"daemon", 'a', 0, 0},
     {0}
 };
-/*option parsing function*/
-error_t parse_opt (int key, char *arg, struct argp_state *state);
-
-static struct argp argp = { options, parse_opt, 0, doc };
-
 /*arguments struct*/
 struct arguments{
     int daemon;
@@ -29,33 +25,22 @@ struct arguments{
     char* device_id;         
 };
 
-/*device data*/
-#define DEVICE_CAP 16
-struct device{
-    char name[100];
-    char port[30];
-    char vid[30];
-    char pid[30];
+enum {
+    UPTIME_VALUE,
+    UPTIME_MAX
 };
 
-struct device_list{
-    struct device devices[DEVICE_CAP];
-    int count;
+static const struct blobmsg_policy info_policy[UPTIME_MAX] = {
+	[UPTIME_VALUE] = { .name = "uptime", .type = BLOBMSG_TYPE_INT32},
 };
 
-struct esp_response{
-    int code;
-    char message[1024];
-};
-
+/*option parsing function*/
+error_t parse_opt (int key, char *arg, struct argp_state *state);
 /*make program a daemon*/
 int daemonize();
 /*gets value field from json MESSAGE and writes to FILENAME upon receiving PARAMETER set*/
 int write_to_file(char* parameter, char* message, char* filename);
-/*main program loop*/
-int main_func(struct arguments arguments);
-/*program signal handler*/
-void sig_handler(int signum);
-/*uptime callback function*/
+/*callback function for ubus*/
+void callback(struct ubus_request *req, int type, struct blob_attr *msg);
 
 #endif

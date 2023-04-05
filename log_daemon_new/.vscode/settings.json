@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "utils.h": "c",
-        "argp.h": "c",
-        "libubus.h": "c",
-        "blobmsg_json.h": "c",
-        "tuya-utils.h": "c"
-    }
-}

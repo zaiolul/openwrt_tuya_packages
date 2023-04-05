@@ -9,8 +9,10 @@
 #include "cJSON.h"
 #include <argp.h>
 #include "utils.h"
-#include <libubox/blobmsg_json.h>
-#include <libubus.h>
+#include "tuya_utils.h"
+#include "ubus_utils.h"
+
+int run = 1;
 
 error_t parse_opt (int key, char *arg, struct argp_state *state)
 {
@@ -104,16 +106,60 @@ int write_to_file(char* parameter, char* message, char* filename)
     return 0;
 }
 
-void callback(struct ubus_request *req, int type, struct blob_attr *msg)
+
+
+void sig_handler(int signum)
 {
-	struct blob_attr *tb[UPTIME_MAX];
-    int *uptime_value = (int*)req->priv;
-	blobmsg_parse(info_policy, UPTIME_MAX, tb, blob_data(msg), blob_len(msg));
-   
-	if (!tb[UPTIME_VALUE]) {
-		puts("No uptime data received\n");
-		return;
-	}
-    *uptime_value = blobmsg_get_u32(tb[UPTIME_VALUE]);
+    if(signum == SIGTERM || signum == SIGINT){
+        syslog(LOG_WARNING, "Received interrupt signal");
+        run = 0;
+    }
+}
+
+int main_func(struct arguments arguments)
+{
+    /*register interrupt*/
+    struct sigaction act;
+    act.sa_handler = sig_handler;
+    sigaction(SIGINT,  &act, 0);
+    sigaction(SIGTERM, &act, 0);
+    
+    /*start log*/
+    openlog("log_daemon", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL0);
+    setlogmask (LOG_UPTO (LOG_INFO));
+
+    /*make program a daemon*/
+    if(arguments.daemon){
+        int status = daemonize();
+        if(status < 0){
+            syslog(LOG_ERR, "Cannot create daemon");
+            return -1;
+        }
+    }
+    int ret;
+    if((ret = ubus_start())){
+        return ret;
+    }
+    
+    if((ret = tuya_start( arguments.device_id, arguments.secret)) != 0){
+        tuya_deinit();
+        return ret;
+    }
+
+    int uptime = 0; 
+
+    while(run){
+        if((ret = tuya_loop()) != 0){
+            syslog(LOG_ERR, "Cannot maintain connection");
+            return ret;
+        }
+        //report_uptime_data();
+    }
+    
+    /*disconnect device*/
+    tuya_deinit();
+    ubus_end();
+
+    return 0;
 }
 

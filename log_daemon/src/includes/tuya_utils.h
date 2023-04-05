@@ -1,8 +1,6 @@
 #ifndef TUYA_UTILS_H
 #define TUYA_UTILS_H
 
-#include "tuyalink_core.h"
-
 /*calls when messages are sent and received*/
 void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_message_t* msg);
 /*initialises mqtt client and connects to cloud*/

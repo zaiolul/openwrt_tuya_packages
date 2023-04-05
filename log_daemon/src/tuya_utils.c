@@ -11,10 +11,9 @@ tuya_mqtt_context_t client_instance;
 
 int send_report(char* report)
 {
-    tuya_mqtt_context_t* client = &client_instance;
     /*send data to cloud*/
     int ret;
-    if((ret = tuyalink_thing_property_report_with_ack(client, NULL, report)) == OPRT_INVALID_PARM){
+    if((ret = tuyalink_thing_property_report_with_ack(&client_instance, NULL, report)) == OPRT_INVALID_PARM){
         syslog(LOG_ERR, "Cannot send report");
         return ret;
     }
@@ -56,7 +55,6 @@ void on_messages(tuya_mqtt_context_t* context, void* user_data, const tuyalink_m
 }
 int tuya_init(char *device_id, char *secret)
 {
-    // tuya_mqtt_context_t* client = &client_instance;
     /* initialize the client */
     int ret = tuya_mqtt_init(&client_instance, &(const tuya_mqtt_config_t) {
         .host = "m1.tuyacn.com",
